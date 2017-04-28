@@ -61,11 +61,8 @@ content=(title+table)
 def valid_username(username):
     return V_U.match(username)
 
-def valid_password(password,verify):
-    if password == verify:
-        return V_P.match(password)
-    else:
-        return False
+def valid_password(password):
+    return V_P.match(password)
 
 def valid_email(email):
     return V_E.match(email)
@@ -80,17 +77,17 @@ class MainHandler(webapp2.RequestHandler):
         self.write_content()
 
     def post(self):
-        username=self.request.get('username')
-        email=self.request.get('email')
-        password=self.request.get('password')
-        verify=self.request.get('verify')
+        username=cgi.escape(self.request.get('username'))
+        email=cgi.escape(self.request.get('email'))
+        password=cgi.escape(self.request.get('password'))
+        verify=cgi.escape(self.request.get('verify'))
 
         ValidName=valid_username(username)
-        ValidPass=valid_password(password,verify)
+        ValidPass=valid_password(password)
         if email != "":
             ValidEmail=valid_email(email)
         else:
-            email=True
+            ValidEmail=True
 
         nameError=''
         passError=''
@@ -100,14 +97,22 @@ class MainHandler(webapp2.RequestHandler):
             nameError="That's not a valid user name"
         if not ValidPass:
             passError="That's not a valid password"
-        if password!=verify:
+        if ValidPass and password!=verify:
             verifyError="The passwords do not match"
         if not ValidEmail:
             emailError="That's not a valid email address"
         self.write_content(nameError,passError,verifyError,emailError,username,email)
 
+        if ValidName and ValidPass and ValidEmail and password==verify:
+            self.redirect('/welcome?username=' + username)
 
+class WelcomeHandler(webapp2.RequestHandler):
+    def get(self):
+        username = self.request.get('username')
+        welcome = "<h1>Welcome, %(username)s!</h1>"
+        self.response.write(welcome % {'username':username})
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainHandler),
+    ('/welcome', WelcomeHandler)
 ], debug=True)
